@@ -21,3 +21,4 @@ with open('ranges.txt') as f:
                                 execfile("search_time.py")
 
 print("Time elapsed: "+str(datetime.now() - t)+" (hh:mm:ss.ms)")
+
