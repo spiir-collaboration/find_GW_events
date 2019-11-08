@@ -46,7 +46,9 @@ max_time_after = d_after*24*60*60 + h_after*60*60 + m_after*60 + s_before
 ### INPUT TIME ###
 #input_time = 1183900955 # GPS time at 2019-10-04T03:04:54, for testing - change later to take user input
 
-folder_ext = "gps"+str(input_time)+"-"+str(str_time_before)+"+"+str(str_time_after)
+FAR = '1e-4'
+
+folder_ext = "gps"+str(input_time)+"-"+str(str_time_before)+"+"+str(str_time_after)+FAR
 try:
         os.mkdir("data/"+folder_ext)
 except:
@@ -56,7 +58,7 @@ time1 = input_time - max_time_before
 time2 = input_time + max_time_after
 
 # looking at CBC events that were not injected
-event_search = 'CBC ~Inj '+str(time1)+' .. '+str(time2)
+event_search = 'CBC ~Inj '+str(time1)+' .. '+str(time2)+'FAR<'+FAR# add FAR limit
 
 try:
         from ligo.gracedb.rest import GraceDb
@@ -72,6 +74,12 @@ gracedb_service_url = "https://"+main_database+".ligo.org/api/"
 gracedb_client = GraceDb(gracedb_service_url)
 
 events = gracedb_client.events(event_search)
+
+# initiate lists of superevent names, pipeline names, comb FAR and comb SNR
+SE_list = []
+PL_list = []
+FAR_list = []
+SNR_list = []
 
 count = 0
 for event in events:
@@ -128,6 +136,10 @@ for event in events:
                 fout.write(content.read())
                 fout.close()
                 f.write(str(gid)+','+str(superevent)+','+str(endtime)+','+str(chirpmass)+','+str(farc)+','+str(snrc)+','+str(ifos)+','+str(snri)+','+str(chisqi)+','+str(pipe)+','+str(eff_dist)+','+str(mass1)+','+str(mass2))
+                SE_list.append(superevent)
+                PL_list.append(pipe)
+                FAR_list.append(farc)
+                SNR_list.append(snrc)
 
 # remove folders of searches that found no events
 # can probably just do this without the if statement - os.rmdir only works for empty folder, which they should be if count == 0
@@ -136,3 +148,57 @@ if count == 0:
                 os.rmdir('data/'+folder_ext)
         except:
                 pass
+
+# #### #
+# PLOT log10(FARc) versus SNRc, highlighting pipelines and superevents. 
+# #### #
+
+def unique(list1):
+    x = np.array(list1)
+    return(np.unique(x))
+
+# get the unique superevents
+unique_SE = unique(SE_list)
+
+PL_arr = np.array(PL_list)
+FAR_arr = np.array(FAR_list)
+SNR_arr = np.array(SNR_list)
+
+PL_subsets = []
+FAR_subsets = []
+SNR_subsets = []
+
+#import matplotlib
+#matplotlib.use('Agg')
+#import matplotlib.pyplot as plt
+
+SE_list_str = []
+for a in unique_SE:
+        SE_list_str.append(str(a))
+
+# go through and find each event that relates to each superevent
+try:
+        with open('data/'+folder_ext+'/'+'superevent_groups', 'w') as f:
+                for unique_event in SE_list_str:
+                        f.write(str(unique_event)+'|')
+                        event_map_tuparr = np.where(np.array(SE_list) == unique_event)
+                        event_map = []
+                        for e in event_map_tuparr[0]:
+                                event_map.append(e)
+                        PL_subset_arr = PL_arr[event_map]
+                        PL_subsets.append(str(PL_subset_arr))
+                        for idx in range(len(PL_subset_arr)-1):
+                                f.write(str(PL_subset_arr[idx])+',')
+                        f.write(str(PL_subset_arr[len(PL_subset_arr)-1])+'|')
+                        FAR_subset_arr = FAR_arr[event_map]
+                        FAR_subsets.append(FAR_subset_arr)
+                        for idx in range(len(FAR_subset_arr)-1):
+                                f.write(str(FAR_subset_arr[idx])+',')
+                        f.write(str(FAR_subset_arr[len(FAR_subset_arr)-1])+'|')
+                        SNR_subset_arr = SNR_arr[event_map]
+                        SNR_subsets.append(SNR_subset_arr)
+                        for idx in range(len(SNR_subset_arr)-1):
+                                f.write(str(SNR_subset_arr[idx])+',')
+                        f.write(str(SNR_subset_arr[len(SNR_subset_arr)-1])+'\n')
+except:
+        pass
