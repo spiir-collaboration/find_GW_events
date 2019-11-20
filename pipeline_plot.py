@@ -49,6 +49,7 @@ with open("public_events.txt") as f:
         public_events.append(line[:-1])
 
 retracted_events = []
+with open("retracted_events.txt") as f:
     for line in f:
         retracted_events.append(line[:-1])
 
@@ -89,7 +90,11 @@ for idx in range(len(superevent_list)):
         pipes = num_pipelines[idx]
         # based on number of events within each superevent, find event with the best (minimum) FAR
         if pipes == 1:
-                interest_idx = 0
+                #interest_idx = 0
+                temp_far = np.zeros(num)
+                for temp_idx in range(num):
+                        temp_far[temp_idx] = float(interest_list[idx][temp_idx])
+                interest_idx = np.argmin(temp_far)
                 far_1d_list.append(float(far_list[idx][interest_idx]))
                 snr_1d_list.append(float(snr_list[idx][interest_idx]))
         elif pipes == 2:
@@ -135,18 +140,19 @@ for idx in range(len(superevent_list)):
         far_plot_list.append(float(far_list[idx][interest_idx]))
         snr_plot_list.append(float(snr_list[idx][interest_idx]))
 
-plt.semilogy(snr_plot_list, far_plot_list,'k,', label = "all events")
+plt.rcParams.update({'font.size': 14})
+#plt.semilogy(snr_plot_list, far_plot_list,'k,', label = "all events")
 plt.semilogy(snr_1d_list, far_1d_list,'yo', label = "1 pipeline")
 plt.semilogy(snr_2d_list, far_2d_list,'go', label = "2 pipelines")
 plt.semilogy(snr_3d_list, far_3d_list,'ro', label = "3 pipelines")
 plt.semilogy(snr_4d_list, far_4d_list,'bo', label = "4 pipelines")
-plt.semilogy(snr_5d_list, far_5d_list,'mo', label = "5+ pipelines")
+#plt.semilogy(snr_5d_list, far_5d_list,'mo', label = "5+ pipelines")
 plt.semilogy(public_snr_list, public_far_list, 'ko', mfc='none', label = "public event")
 plt.semilogy(retracted_snr_list, retracted_far_list, 'kx', label = "retracted events")
 plt.ylabel(r"$log_{10}(FAR)$")
 plt.xlabel("SNR")
-#plt.title("Distribution of pipeline triggers around GPS time "+search_time)
 plt.title("Distribution of pipeline triggers in O3a")
 plt.legend(loc=0)
-plt.show()
+plt.savefig("pipeline_distribution.png")
 plt.clf()
+#print(min_far_idx_list)
